@@ -1,0 +1,26 @@
+version: "3.8"
+
+services:
+  database:
+    extends:
+      file: back/docker-compose.yaml
+      service: database
+
+  back:
+    extends:
+      file: back/docker-compose.yaml
+      service: node-back
+    volumes:
+      - ./back:/srv/app
+
+  front:
+    extends:
+      file: front/docker-compose.yaml
+      service: node
+    volumes:
+        - ./front:/srv/app
+
+  adminer:
+    image: adminer
+    ports:
+      - "9090:8080"
