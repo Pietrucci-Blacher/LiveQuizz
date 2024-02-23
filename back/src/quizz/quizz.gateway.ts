@@ -3,16 +3,26 @@ import {
   WebSocketGateway,
   OnGatewayConnection,
   OnGatewayDisconnect,
-  WsResponse,
   ConnectedSocket,
   MessageBody,
   WebSocketServer,
+  OnGatewayInit,
+  WsResponse,
 } from '@nestjs/websockets';
 import { Socket, Server } from 'socket.io';
+import { QuizzService } from './quizz.service';
+import { CreateQuizzDto } from './dto/create-quizz.dto';
+import { FindQuizzDto } from './dto/find-quizz.dto';
+import { AnswerQuestionDto } from './dto/answer-question-quizz.dto';
+import { QuestionNoCorrect } from './interfaces/quizz.interface';
 
 @WebSocketGateway()
-export class QuizzGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class QuizzGateway
+  implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit
+{
   @WebSocketServer() server: Server;
+
+  constructor(private readonly quizzService: QuizzService) {}
 
   handleConnection(client: Socket) {
     console.log('client', client.id, 'connected');
@@ -20,21 +30,63 @@ export class QuizzGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleDisconnect(client: Socket) {
     console.log('client', client.id, 'disconnected');
+    this.quizzService.removeUserFromAllQuizz(client.id);
   }
 
-  @SubscribeMessage('joinQuizz')
-  joinQuizz(@ConnectedSocket() client: Socket, @MessageBody() payload: any) {
-    console.log('client', client.id, 'payload', payload);
-    client.join(payload.quizzId);
-    this.server.to(payload.quizzId).emit('joinQuizz', 'test');
+  afterInit(server: Server) {
+    this.quizzService.setServer(server);
   }
 
   @SubscribeMessage('createQuizz')
   createQuizz(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: any,
-  ): WsResponse<any> {
-    console.log('client', client.id, 'payload', payload);
-    return { event: 'createQuizz', data: 'test' };
+    @MessageBody() { quizzId, questions }: CreateQuizzDto,
+  ) {
+    this.quizzService.createQuizz(quizzId, client.id, questions);
+  }
+
+  @SubscribeMessage('joinQuizz')
+  joinQuizz(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() { quizzId }: FindQuizzDto,
+  ): WsResponse<QuestionNoCorrect[]> {
+    this.quizzService.addUsersToQuizz(quizzId, client.id);
+    const questions: QuestionNoCorrect[] =
+      this.quizzService.getQestionByQuizzId(quizzId, client.id);
+
+    return { event: 'quizzQuestions', data: questions };
+  }
+
+  @SubscribeMessage('leaveQuizz')
+  leaveQuizz(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() { quizzId }: FindQuizzDto,
+  ) {
+    this.quizzService.removeUserFromQuizz(quizzId, client.id);
+  }
+
+  @SubscribeMessage('answerQuestion')
+  answerQuestion(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() { quizzId, question, answer }: AnswerQuestionDto,
+  ): WsResponse<boolean> {
+    const response: boolean = this.quizzService.answerQuestion(
+      quizzId,
+      client.id,
+      question,
+      answer,
+    );
+    return { event: 'answerQuestionResponse', data: response };
+  }
+
+  @SubscribeMessage('getQuestions')
+  getQuestions(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() { quizzId }: FindQuizzDto,
+  ): WsResponse<QuestionNoCorrect[]> {
+    const questions: QuestionNoCorrect[] =
+      this.quizzService.getQestionByQuizzId(quizzId, client.id);
+
+    return { event: 'quizzQuestions', data: questions };
   }
 }
