@@ -13,7 +13,7 @@ import { Socket, Server } from 'socket.io';
 import { QuizzService } from './quizz.service';
 import { CreateQuizzDto } from './dto/create-quizz.dto';
 import { FindQuizzDto } from './dto/find-quizz.dto';
-import { AnswerQuestionDto } from './dto/answer-question-quizz.dto';
+import { AnswerQuestionQuizzDto  } from './dto/answer-question-quizz.dto';
 import { QuestionNoCorrect } from './interfaces/quizz.interface';
 
 @WebSocketGateway()
@@ -68,7 +68,7 @@ export class QuizzGateway
   @SubscribeMessage('answerQuestion')
   answerQuestion(
     @ConnectedSocket() client: Socket,
-    @MessageBody() { quizzId, question, answer }: AnswerQuestionDto,
+    @MessageBody() { quizzId, question, answer }: AnswerQuestionQuizzDto,
   ): WsResponse<boolean> {
     const response: boolean = this.quizzService.answerQuestion(
       quizzId,
