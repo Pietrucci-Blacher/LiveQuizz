@@ -14,7 +14,6 @@ export default function Quiz() {
         });
     }, [socket]);
 
-
     return (
         <>
             <h2>la liste des quizz</h2>
@@ -25,6 +24,10 @@ export default function Quiz() {
                     </div>
                 ))}
             </div>
+            <h2>Creer votre quiz</h2>
+            <Link href="/quiz/create">Creer</Link>
+            <p>----</p>
+            <Link href="/">Retour</Link>
         </>
     )
 }
