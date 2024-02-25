@@ -1,26 +1,27 @@
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
-import socket from '@/services/socket';
+import { useSocket } from '@/context/SocketContext';
 
 const Lobby = () => {
   const router = useRouter();
+  const { socket } = useSocket();
   const { roomId } = router.query;
   const [participants, setParticipants] = useState<string[]>([]);
 
   useEffect(() => {
     if (roomId) {
-      socket.emit('joinLobby', { roomId });
+      socket?.emit('joinLobby', { roomId });
 
-      socket.on('updateParticipants', (data) => {
+      socket?.on('updateParticipants', (data) => {
         setParticipants(data.participants);
       });
     }
 
     return () => {
       if (roomId) {
-        socket.emit('leaveLobby', { roomId });
+        socket?.emit('leaveLobby', { roomId });
       }
-      socket.off('updateParticipants');
+      socket?.off('updateParticipants');
     };
   }, [roomId]);
 

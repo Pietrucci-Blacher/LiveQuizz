@@ -17,7 +17,6 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
     useEffect(() => {
         const newSocket = io('http://localhost:3000');
-        console.log("new", newSocket)
         setSocket(newSocket);
 
         return () => {
@@ -25,7 +24,6 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
         };
     }, []);
 
-    // useMemo to memoize the value object
     const value = useMemo(() => ({ socket, setSocket }), [socket]);
 
     return (
