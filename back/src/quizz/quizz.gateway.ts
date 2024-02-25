@@ -1,22 +1,25 @@
 import {
-  SubscribeMessage,
-  WebSocketGateway,
-  OnGatewayConnection,
-  OnGatewayDisconnect,
   ConnectedSocket,
   MessageBody,
-  WebSocketServer,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
   OnGatewayInit,
+  SubscribeMessage,
+  WebSocketGateway,
+  WebSocketServer,
   WsResponse,
 } from '@nestjs/websockets';
-import { Socket, Server } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 import { QuizzService } from './quizz.service';
 import { CreateQuizzDto } from './dto/create-quizz.dto';
 import { FindQuizzDto } from './dto/find-quizz.dto';
 import { AnswerQuestionQuizzDto } from './dto/answer-question-quizz.dto';
-import { QuestionNoCorrect } from './interfaces/quizz.interface';
+import { QuestionNoCorrect, Quizz } from './interfaces/quizz.interface';
+import { UpdateQuizzDto } from './dto/update-quizz.dto';
 
-@WebSocketGateway()
+@WebSocketGateway({
+  cors: true,
+})
 export class QuizzGateway
   implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit
 {
@@ -30,7 +33,7 @@ export class QuizzGateway
 
   handleDisconnect(client: Socket) {
     console.log('client', client.id, 'disconnected');
-    this.quizzService.removeUserFromAllQuizz(client.id);
+    // this.quizzService.removeUserFromAllQuizz(client.id);
   }
 
   afterInit(server: Server) {
@@ -40,9 +43,24 @@ export class QuizzGateway
   @SubscribeMessage('createQuizz')
   createQuizz(
     @ConnectedSocket() client: Socket,
-    @MessageBody() { quizzId, questions }: CreateQuizzDto,
+    @MessageBody() createQuizzDto: CreateQuizzDto,
   ) {
-    this.quizzService.createQuizz(quizzId, client.id, questions);
+    try {
+      this.quizzService.createQuizz(
+        createQuizzDto.quizzId,
+        client.id,
+        createQuizzDto.questions,
+      );
+      client.emit('quizzCreated', {
+        success: true,
+        quizzId: createQuizzDto.quizzId,
+      });
+    } catch (error) {
+      client.emit('quizzCreated', {
+        success: false,
+        message: 'Erreur lors de la création du quiz',
+      });
+    }
   }
 
   @SubscribeMessage('joinQuizz')
@@ -88,5 +106,30 @@ export class QuizzGateway
       this.quizzService.getQestionByQuizzId(quizzId, client.id);
 
     return { event: 'quizzQuestions', data: questions };
+  }
+
+  @SubscribeMessage('getAllQuizz')
+  getAllQuizz(@ConnectedSocket() client: Socket): WsResponse<Quizz[]> {
+    const quizzList = this.quizzService.getAllQuizz();
+    return { event: 'quizzList', data: quizzList };
+  }
+
+  @SubscribeMessage('updateQuizzQuestions')
+  updateQuizzQuestions(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() updateQuizzDto: UpdateQuizzDto,
+  ): void {
+    try {
+      this.quizzService.updateQuizzQuestions(
+        updateQuizzDto.quizzId,
+        updateQuizzDto.questions,
+      );
+      client.emit('quizzUpdated', { success: true });
+    } catch (error) {
+      client.emit('quizzUpdated', {
+        success: false,
+        message: 'Erreur lors de la mise à jour du quiz',
+      });
+    }
   }
 }

@@ -12,45 +12,50 @@ interface Question {
     options: Option[];
 }
 
-const QuizForm: React.FC = () => {
-    const {socket} = useSocket()
-    const router = useRouter()
-    const [questions, setQuestions] = useState<Question[]>([{text: '', options: [{value: '', isCorrect: false}]}]);
+const EditQuizForm: React.FC = () => {
+    const {socket} = useSocket();
+    const [questions, setQuestions] = useState<Question[]>([]);
+    const router = useRouter();
     const [error, setError] = useState<string>('');
-
+    const {id} = router.query;
     useEffect(() => {
-        socket?.on('quizzCreated', (response) => {
+        const {id} = router.query;
+        if (!id) return
+        socket?.emit('getQuestions', {
+            quizzId: id
+        });
+        socket?.on('quizzQuestions', (quizzes: []) => {
+            const transformedData = quizzes?.map(q => ({
+                text: q.question,
+                options: q?.answers?.map(answer => ({
+                    value: answer,
+                    isCorrect: false // Définir la bonne réponse ici
+                }))
+            }));
+            setQuestions(transformedData);
+        });
+        socket?.on('quizzUpdated', (response) => {
             if (response?.success){
-                alert('le quiz a bien été rajouté')
+                alert('le quiz a bien été mis a jour')
                 router.push('/quiz')
             }
             else{
                 alert('error')
             }
         });
-    }, [socket]);
-
+    }, [router, socket]);
     const addQuestion = () => {
-        if (questions.some(question => question.text.trim() === '' || question.options.some(option => option.value.trim() === ''))) {
-            alert('Please fill in all fields before adding a new question.');
-            return;
-        }
-        setQuestions([...questions, {text: '', options: [{value: '', isCorrect: false}]}]);
-    };
-
-    const handleQuestionChange = (index: number, value: string) => {
-        const newQuestions = [...questions];
-        newQuestions[index].text = value;
-        setQuestions(newQuestions);
+        setQuestions([...questions, { text: '', options: [{ value: '', isCorrect: false }] }]);
     };
 
     const addOption = (questionIndex: number) => {
-        if (questions[questionIndex].options.some(option => option.value.trim() === '')) {
-            alert('Please fill in all option fields before adding a new option.');
-            return;
-        }
         const newQuestions = [...questions];
-        newQuestions[questionIndex].options.push({value: '', isCorrect: false});
+        newQuestions[questionIndex].options.push({ value: '', isCorrect: false });
+        setQuestions(newQuestions);
+    };
+    const handleQuestionChange = (index: number, value: string) => {
+        const newQuestions = [...questions];
+        newQuestions[index].text = value;
         setQuestions(newQuestions);
     };
 
@@ -86,6 +91,11 @@ const QuizForm: React.FC = () => {
                 return;
             }
 
+            if (question.options.length === 0) {
+                setError('Each question must have at least one option.');
+                return;
+            }
+
             if (question.options.some(option => option.value.trim() === '')) {
                 setError('All options must be filled in each question.');
                 return;
@@ -97,29 +107,22 @@ const QuizForm: React.FC = () => {
                 return;
             }
         }
-        const quizzId = Date.now().toString(36) + Math.random().toString(36).substr(2);
-
-        const transformedQuestions = questions.map(q => ({
+        setError('');
+        const transformedQuestions = questions?.map(q => ({
             question: q.text,
             answers: q.options.map(opt => ({
                 answer: opt.value,
                 correct: opt.isCorrect
             }))
         }));
-
-        const payload = {
-            quizzId, questions:transformedQuestions
-        };
-
-        socket?.emit('createQuizz', payload)
-        setError('');
+        socket?.emit('updateQuizzQuestions', {quizzId:id,questions:transformedQuestions});
     };
 
     return (
         <div>
-            <h2>Create a Quiz</h2>
+            <h2>Edit Quiz</h2>
             {error && <p style={{color: 'red'}}>{error}</p>}
-            {questions.map((question, qIndex) => (
+            {questions?.map((question, qIndex) => (
                 <div key={qIndex}>
                     <input
                         type="text"
@@ -128,6 +131,7 @@ const QuizForm: React.FC = () => {
                         placeholder={`Question ${qIndex + 1}`}
                     />
                     <button onClick={() => deleteQuestion(qIndex)}>Delete Question</button>
+                    <button onClick={() => addOption(qIndex)}>Add Option</button>
                     {question.options.map((option, oIndex) => (
                         <div key={oIndex}>
                             <input
@@ -145,13 +149,14 @@ const QuizForm: React.FC = () => {
                             <button onClick={() => deleteOption(qIndex, oIndex)}>Delete Option</button>
                         </div>
                     ))}
-                    <button onClick={() => addOption(qIndex)}>Add Option</button>
+                    <br/>
                 </div>
             ))}
             <button onClick={addQuestion}>Add Question</button>
-            <button onClick={submitQuiz}>Submit Quiz</button>
+
+            <button onClick={submitQuiz}>Update Quiz</button>
         </div>
     );
 };
 
-export default QuizForm;
+export default EditQuizForm;
