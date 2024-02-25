@@ -101,11 +101,49 @@ export class QuizzGateway
   getQuestions(
     @ConnectedSocket() client: Socket,
     @MessageBody() { quizzId }: FindQuizzDto,
-  ): WsResponse<QuestionNoCorrect[]> {
-    const questions: QuestionNoCorrect[] =
-      this.quizzService.getQestionByQuizzId(quizzId, client.id);
+  ) {
+    const quizz = this.quizzService.getQuizzById(quizzId);
+    if (!quizz) {
+      client.emit('error', 'Quiz not found');
+      return;
+    }
 
-    return { event: 'quizzQuestions', data: questions };
+    let currentQuestionIndex = 0;
+    const sendQuestion = () => {
+      if (currentQuestionIndex < quizz.questions.length) {
+        const questionNoCorrect = {
+          question: quizz.questions[currentQuestionIndex].question,
+          answers: quizz.questions[currentQuestionIndex].answers.map(
+            (a) => a.answer,
+          ),
+        };
+
+        client.emit('quizzQuestion', questionNoCorrect);
+        startTimer(30, currentQuestionIndex); // 30 secondes pour chaque question
+        currentQuestionIndex++;
+      } else {
+        client.emit('quizzEnd');
+      }
+    };
+
+    const startTimer = (duration, questionIndex) => {
+      let remaining = duration;
+      const timerInterval = setInterval(() => {
+        client.emit('timerUpdate', { remaining, questionIndex });
+        remaining--;
+
+        if (remaining < 0) {
+          clearInterval(timerInterval);
+          if (questionIndex === quizz.questions.length - 1) {
+            client.emit('quizzEnd'); // Envoi de l'événement de fin si c'est la dernière question
+          } else {
+            sendQuestion();
+          }
+        }
+      }, 1000); // Mise à jour chaque seconde
+    };
+
+    sendQuestion(); // Démarre avec la première question
   }
 
   @SubscribeMessage('getAllQuizz')
@@ -131,5 +169,19 @@ export class QuizzGateway
         message: 'Erreur lors de la mise à jour du quiz',
       });
     }
+  }
+
+  @SubscribeMessage('joinQuizzRoom')
+  async joinQuizzRoom(client: Socket, { quizzId }: { quizzId: string }) {
+    client.join(quizzId);
+    client.emit('joinedQuizzRoom', {
+      quizzId,
+      message: 'Vous avez rejoint la salle du quiz.',
+    });
+  }
+
+  @SubscribeMessage('quizStarted')
+  async quizStarted(client: Socket, { quizzId }: { quizzId: string }) {
+    this.server.to(quizzId).emit('quizStarted', { quizzId });
   }
 }
