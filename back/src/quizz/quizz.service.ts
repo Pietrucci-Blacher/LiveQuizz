@@ -3,6 +3,8 @@ import {
   Quizz,
   Question,
   QuestionNoCorrect,
+  Answer,
+  AnsweredQuestion,
 } from './interfaces/quizz.interface';
 import { Server } from 'socket.io';
 
@@ -43,8 +45,10 @@ export class QuizzService {
     const { admin, socketIds } = quizz;
 
     this.server.to(admin).socketsLeave(quizzId);
-    for (const socketId of socketIds)
+    for (const socketId of socketIds) {
+      this.server.to(socketId).emit('quizzEnd', { quizzId });
       this.server.to(socketId).socketsLeave(quizzId);
+    }
 
     this.quizzs = this.quizzs.filter((quizz) => quizz.quizzId !== quizzId);
     console.log('remove quizz', this.quizzs);
@@ -106,7 +110,6 @@ export class QuizzService {
       return { ...rest, answers: answers.map((answer) => answer.answer) };
     });
 
-    console.log('get question by quizz id', newQuestions);
     return newQuestions;
   }
 
@@ -118,24 +121,53 @@ export class QuizzService {
   ): boolean {
     const quizz: Quizz = this.getQuizzById(quizzId);
     if (!quizz) return;
-    console.log('answer question', quizz.socketIds, socketId);
     if (!quizz.socketIds.includes(socketId)) return;
-    if (quizz.answeredQuestions.find((q) => q.socketId === socketId)) return;
-    console.log('answer question', quizz.answeredQuestions);
+    if (
+      quizz.answeredQuestions.find(
+        (q) => q.socketId === socketId && q.question == question,
+      )
+    )
+      return;
 
     const { questions } = quizz;
-    const currentQuestion = questions.find((q) => q.question === question);
+    const currentQuestion: Question = questions.find(
+      (q) => q.question === question,
+    );
     if (!currentQuestion) return;
-    console.log('answer question', currentQuestion.answers, answer);
 
-    const correctAnswer = currentQuestion.answers.find((a) => a.correct);
+    const correctAnswer: Answer = currentQuestion.answers.find(
+      (a) => a.correct,
+    );
     if (!correctAnswer) return;
-    console.log('answer question', correctAnswer.answer, answer);
 
-    const isCorrect = correctAnswer.answer === answer;
-    quizz.answeredQuestions.push({ socketId, question, answer, isCorrect });
+    const isCorrect: boolean = correctAnswer.answer === answer;
+    const newAnsweredQuestion: AnsweredQuestion = {
+      socketId,
+      question,
+      answer,
+      isCorrect,
+    };
+    quizz.answeredQuestions.push(newAnsweredQuestion);
 
-    console.log('answer question', quizz.answeredQuestions);
+    this.server.to(quizz.admin).emit('userAnswerQuestion', newAnsweredQuestion);
+
+    console.log('answer a questions', this.quizzs);
     return isCorrect;
+  }
+
+  getResultsBySocketId(quizzId: string, socketId: string): AnsweredQuestion[] {
+    const quizz: Quizz = this.getQuizzById(quizzId);
+    if (!quizz) return;
+    if (!quizz.socketIds.includes(socketId)) return;
+
+    const { answeredQuestions } = quizz;
+    return answeredQuestions.filter((q) => q.socketId === socketId);
+  }
+
+  getResults(quizzId: string): AnsweredQuestion[] {
+    const quizz: Quizz = this.getQuizzById(quizzId);
+    if (!quizz) return;
+
+    return quizz.answeredQuestions;
   }
 }
