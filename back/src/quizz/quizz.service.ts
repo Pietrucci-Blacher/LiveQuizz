@@ -238,4 +238,16 @@ export class QuizzService {
     quizz.questions = newQuestions;
     console.log(`Quiz with ID ${quizzId} has been updated with new questions.`);
   }
+
+  getQuizzScore(quizzId: string, socketId: string): number {
+    const quizz = this.getQuizzById(quizzId);
+    if (!quizz) return;
+
+    const userAnswers = quizz.answeredQuestions.filter(
+      (q) => q.socketId === socketId,
+    );
+
+    const correctAnswers = userAnswers.filter((q) => q.isCorrect);
+    return correctAnswers.length;
+  }
 }
