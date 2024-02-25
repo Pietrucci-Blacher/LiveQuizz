@@ -24,6 +24,13 @@ const Lobby = () => {
       socket?.off('updateParticipants');
     };
   }, [roomId]);
+  
+  const startQuiz = () => {
+    if (roomId) {
+      socket?.emit('startQuizz', { quizzId: roomId });
+      router.push(`/start/${roomId}`);
+    }
+  };
 
   return (
     <div>
@@ -34,6 +41,7 @@ const Lobby = () => {
           <li key={index}>{participant}</li>
         ))}
       </ul>
+      <button onClick={startQuiz}>Démarrer le Quiz</button>
     </div>
   );
 };
