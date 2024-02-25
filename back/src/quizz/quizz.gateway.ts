@@ -138,7 +138,7 @@ export class QuizzGateway
         };
 
         client.emit('quizzQuestion', questionNoCorrect);
-        startTimer(30, currentQuestionIndex); // 30 secondes pour chaque question
+        startTimer(30, currentQuestionIndex);
         currentQuestionIndex++;
       } else {
         client.emit('quizzEnd');
@@ -154,15 +154,15 @@ export class QuizzGateway
         if (remaining < 0) {
           clearInterval(timerInterval);
           if (questionIndex === quizz.questions.length - 1) {
-            client.emit('quizzEnd'); // Envoi de l'événement de fin si c'est la dernière question
+            client.emit('quizzEnd');
           } else {
             sendQuestion();
           }
         }
-      }, 1000); // Mise à jour chaque seconde
+      }, 1000);
     };
 
-    sendQuestion(); // Démarre avec la première question
+    sendQuestion();
   }
 
   @SubscribeMessage('getAllQuizz')

@@ -117,7 +117,7 @@ const QuizForm: React.FC = () => {
 
     return (
         <div>
-            <h2>Create a Quiz</h2>
+            <h2>Creer un Quiz</h2>
             {error && <p style={{color: 'red'}}>{error}</p>}
             {questions.map((question, qIndex) => (
                 <div key={qIndex}>
