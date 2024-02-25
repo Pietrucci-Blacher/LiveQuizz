@@ -1,11 +1,11 @@
-import { useRouter } from "next/router";
-import { useSocket } from "@/context/SocketContext";
-import { useEffect, useState } from "react";
+import {useRouter} from "next/router";
+import {useSocket} from "@/context/SocketContext";
+import {useEffect, useState} from "react";
 
 export default function Id() {
     const router = useRouter();
-    const { socket } = useSocket();
-    const { id } = router.query;
+    const {socket} = useSocket();
+    const {id} = router.query;
     const [currentQuestion, setCurrentQuestion] = useState(null);
     const [timer, setTimer] = useState(null);
     const [quizEnded, setQuizEnded] = useState(false);
@@ -19,18 +19,14 @@ export default function Id() {
             )
             socket.on('quizzQuestion', (question) => {
                 setCurrentQuestion(question);
-                setTimer(null); // Réinitialiser le timer pour la nouvelle question
+                setTimer(null);
             });
-
-            // Écouter les mises à jour du timer
-            socket.on('timerUpdate', ({ remaining }) => {
+            socket.on('timerUpdate', ({remaining}) => {
                 setTimer(remaining);
             });
-
-            // Écouter l'événement de fin du quiz
             socket.on('quizzEnd', () => {
                 setQuizEnded(true);
-                setCurrentQuestion(null); // Nettoyer la question actuelle
+                setCurrentQuestion(null);
             });
 
             socket.on('quizzScore', (score) => {
@@ -39,13 +35,21 @@ export default function Id() {
         }
 
         return () => {
-            // Nettoyer les écouteurs d'événements lors de la désinscription du composant
+            socket?.off('getQuestions');
             socket?.off('quizzQuestion');
             socket?.off('timerUpdate');
             socket?.off('quizzEnd');
         };
     }, [socket, id]);
-
+    const handleCheckboxChange = (question, answer, isChecked) => {
+        console.log("ok", question, answer, isChecked)
+        const payload = {
+            "quizzId": id,
+            "question": question,
+            "answer": answer
+        }
+        socket?.emit('answerQuestion', payload);
+    };
     return (
         <div>
             <h2>Quiz: {id}</h2>
@@ -56,7 +60,15 @@ export default function Id() {
                             <h3>{currentQuestion.question}</h3>
                             <ul>
                                 {currentQuestion.answers.map((answer, index) => (
-                                    <li key={index}>{answer}</li>
+                                    <li key={index}>
+                                        <input
+                                            type="radio"
+                                            id={`answer-${index}`}
+                                            name="answer"
+                                            onChange={(e) => handleCheckboxChange(currentQuestion.question, answer, e.target.checked)}
+                                        />
+                                        <label htmlFor={`answer-${index}`}>{answer}</label>
+                                    </li>
                                 ))}
                             </ul>
                         </div>

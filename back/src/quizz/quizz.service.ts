@@ -172,14 +172,14 @@ export class QuizzService {
   ): boolean {
     const quizz: Quizz = this.getQuizzById(quizzId);
     if (!quizz) return;
-    if (!quizz.socketIds.includes(socketId)) return;
-    if (
-      quizz.answeredQuestions.find(
-        (q) => q.socketId === socketId && q.question == question,
-      )
-    )
-      return;
-    if (!quizz.started) return;
+
+    // if (!quizz.socketIds.includes(socketId)) return;
+    // if (
+    //   quizz.answeredQuestions.find(
+    //     (q) => q.socketId === socketId && q.question == question,
+    //   )
+    // )
+    //   return;
 
     const { questions } = quizz;
     const currentQuestion: Question = questions.find(
