@@ -142,6 +142,11 @@ export class QuizzGateway
         currentQuestionIndex++;
       } else {
         client.emit('quizzEnd');
+        const scores: number = this.quizzService.getQuizzScore(
+          quizzId,
+          client.id,
+        );
+        client.emit('quizzScore', scores);
       }
     };
 
@@ -155,6 +160,11 @@ export class QuizzGateway
           clearInterval(timerInterval);
           if (questionIndex === quizz.questions.length - 1) {
             client.emit('quizzEnd'); // Envoi de l'événement de fin si c'est la dernière question
+            const scores: number = this.quizzService.getQuizzScore(
+              quizzId,
+              client.id,
+            );
+            client.emit('quizzScore', scores);
           } else {
             sendQuestion();
           }

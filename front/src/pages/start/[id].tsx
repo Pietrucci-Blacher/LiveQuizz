@@ -9,6 +9,7 @@ export default function Id() {
     const [currentQuestion, setCurrentQuestion] = useState(null);
     const [timer, setTimer] = useState(null);
     const [quizEnded, setQuizEnded] = useState(false);
+    const [score, setScore] = useState<number>(0);
 
     useEffect(() => {
         if (socket) {
@@ -26,6 +27,10 @@ export default function Id() {
             socket.on('quizzEnd', () => {
                 setQuizEnded(true);
                 setCurrentQuestion(null);
+            });
+
+            socket.on('quizzScore', (score) => {
+                setScore(score);
             });
         }
 
@@ -71,7 +76,10 @@ export default function Id() {
                     {timer !== null && <p>Temps restant : {timer} secondes</p>}
                 </div>
             ) : (
-                <p>Le quiz est terminé!</p>
+                <>
+                    <p>Le quiz est terminé!</p>
+                    <p>Votre score est de {score} points</p>
+                </>
             )}
         </div>
     );
