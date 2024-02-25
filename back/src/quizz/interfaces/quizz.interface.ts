@@ -26,4 +26,5 @@ export interface Quizz {
   quizzId: string;
   questions: Question[];
   answeredQuestions?: AnsweredQuestion[];
+  started: boolean;
 }

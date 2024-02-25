@@ -67,12 +67,13 @@ export class QuizzGateway
   joinQuizz(
     @ConnectedSocket() client: Socket,
     @MessageBody() { quizzId }: FindQuizzDto,
-  ): WsResponse<QuestionNoCorrect[]> {
-    this.quizzService.addUsersToQuizz(quizzId, client.id);
-    const questions: QuestionNoCorrect[] =
-      this.quizzService.getQestionByQuizzId(quizzId, client.id);
+  ): WsResponse<boolean> {
+    const joined: boolean = this.quizzService.addUsersToQuizz(
+      quizzId,
+      client.id,
+    );
 
-    return { event: 'quizzQuestions', data: questions };
+    return { event: 'joinedQuizz', data: joined };
   }
 
   @SubscribeMessage('leaveQuizz')
@@ -81,6 +82,22 @@ export class QuizzGateway
     @MessageBody() { quizzId }: FindQuizzDto,
   ) {
     this.quizzService.removeUserFromQuizz(quizzId, client.id);
+  }
+
+  @SubscribeMessage('startQuizz')
+  startQuizz(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() { quizzId }: FindQuizzDto,
+  ) {
+    this.quizzService.startQuizz(quizzId, client.id);
+  }
+
+  @SubscribeMessage('stopQuizz')
+  stopQuizz(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() { quizzId }: FindQuizzDto,
+  ) {
+    this.quizzService.stopQuizz(quizzId, client.id);
   }
 
   @SubscribeMessage('answerQuestion')
@@ -94,6 +111,8 @@ export class QuizzGateway
       question,
       answer,
     );
+    this.quizzService.sendNextQuestion(quizzId, question, client.id);
+
     return { event: 'answerQuestionResponse', data: response };
   }
 

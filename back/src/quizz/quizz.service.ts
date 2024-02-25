@@ -23,6 +23,7 @@ export class QuizzService {
       admin: socketId,
       questions,
       answeredQuestions: [],
+      started: false,
     };
     this.quizzs.push(newQuizz);
 
@@ -62,16 +63,43 @@ export class QuizzService {
     this.server = server;
   }
 
-  addUsersToQuizz(quizzId: string, socketId: string) {
+  addUsersToQuizz(quizzId: string, socketId: string): boolean {
     const quizz: Quizz = this.getQuizzById(quizzId);
-    if (!quizz) return;
-    if (quizz.socketIds.includes(socketId)) return;
+    if (!quizz) return false;
+    if (quizz.socketIds.includes(socketId)) return false;
 
     this.server.to(socketId).socketsJoin(quizzId);
     this.server.to(quizzId).emit('userJoinQuizz', 'user join quizz');
 
     quizz.socketIds.push(socketId);
     console.log('add user to quizz', this.quizzs);
+    return true;
+  }
+
+  startQuizz(quizzId: string, socketId: string) {
+    const quizz: Quizz = this.getQuizzById(quizzId);
+    if (!quizz) return;
+    if (quizz.admin !== socketId) return;
+    if (quizz.started) return;
+
+    quizz.started = true;
+    const firstQuestion: QuestionNoCorrect =
+      this.getQestionByQuizzId(quizzId)[0];
+    console.log('firstQuestion', firstQuestion);
+
+    this.server.to(quizzId).emit('quizzStart', { quizzId });
+    this.server.to(quizzId).emit('quizzQuestion', firstQuestion);
+    console.log('start quizz', this.quizzs);
+  }
+
+  stopQuizz(quizzId: string, socketId: string) {
+    const quizz: Quizz = this.getQuizzById(quizzId);
+    if (!quizz) return;
+    if (quizz.admin !== socketId) return;
+    if (!quizz.started) return;
+
+    quizz.started = false;
+    this.server.to(quizzId).emit('quizzEnd', { quizzId });
   }
 
   removeUserFromQuizz(quizzId: string, socketId: string) {
@@ -102,11 +130,9 @@ export class QuizzService {
     return this.quizzs?.find((quizz) => quizz.admin === socketId);
   }
 
-  getQestionByQuizzId(quizzId: string, socketId: string): QuestionNoCorrect[] {
+  getQestionByQuizzId(quizzId: string): QuestionNoCorrect[] {
     const quizz: Quizz = this.getQuizzById(quizzId);
-    console.log(quizz, socketId)
     if (!quizz) return;
-    // if (!quizz.socketIds.includes(socketId)) return;
 
     const { questions } = quizz;
 
@@ -116,6 +142,26 @@ export class QuizzService {
     });
 
     return newQuestions;
+  }
+
+  sendNextQuestion(quizzId: string, question: string, socketId: string) {
+    const quizz: Quizz = this.getQuizzById(quizzId);
+    if (!quizz) return;
+
+    const { questions } = quizz;
+    const index: number = questions.findIndex((q) => q.question === question);
+    if (index === -1) return;
+
+    const nextQuestion: Question = questions[index + 1];
+    if (!nextQuestion) return;
+
+    const { answers, ...rest } = nextQuestion;
+    const nextQuestionNoCorrect: QuestionNoCorrect = {
+      ...rest,
+      answers: answers.map((answer) => answer.answer),
+    };
+
+    this.server.to(socketId).emit('quizzQuestion', nextQuestionNoCorrect);
   }
 
   answerQuestion(
@@ -133,6 +179,7 @@ export class QuizzService {
       )
     )
       return;
+    if (!quizz.started) return;
 
     const { questions } = quizz;
     const currentQuestion: Question = questions.find(
