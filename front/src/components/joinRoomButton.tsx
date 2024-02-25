@@ -1,5 +1,5 @@
 import { Button } from '@mui/material';
-import socket from '../../socket';
+import socket from '../services/socket';
 import React from "react";
 
 interface JoinRoomButtonProps {

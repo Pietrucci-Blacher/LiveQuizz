@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react';
-import socket from '../../socket';
+import socket from '../services/socket';
 
 const useSocket = (roomId?: string) => {
     const createRoom = useCallback((quizId: string) => {

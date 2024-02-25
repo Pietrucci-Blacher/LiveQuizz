@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect } from 'react';
-import socket from '../socket';
+import socket from '@/services/socket';
 import CreateRoomButton from "@/components/createRoomButton";
 
 const HomePage: React.FC = () => {
