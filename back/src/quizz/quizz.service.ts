@@ -30,6 +30,10 @@ export class QuizzService {
     console.log('create a quizz', this.quizzs);
   }
 
+  getAllQuizz(): Quizz[] {
+    return this.quizzs;
+  }
+
   getQuizz(): Quizz[] {
     return this.quizzs;
   }
@@ -100,8 +104,9 @@ export class QuizzService {
 
   getQestionByQuizzId(quizzId: string, socketId: string): QuestionNoCorrect[] {
     const quizz: Quizz = this.getQuizzById(quizzId);
+    console.log(quizz, socketId)
     if (!quizz) return;
-    if (!quizz.socketIds.includes(socketId)) return;
+    // if (!quizz.socketIds.includes(socketId)) return;
 
     const { questions } = quizz;
 
@@ -169,5 +174,21 @@ export class QuizzService {
     if (!quizz) return;
 
     return quizz.answeredQuestions;
+  }
+
+  updateQuizzQuestions(quizzId: string, newQuestions: Question[]) {
+    const quizz = this.getQuizzById(quizzId);
+    if (!quizz) {
+      console.error(`Quiz with ID ${quizzId} not found.`);
+      return;
+    }
+
+    if (!newQuestions || newQuestions.length === 0) {
+      console.error(`No new questions provided for quiz with ID ${quizzId}.`);
+      return;
+    }
+
+    quizz.questions = newQuestions;
+    console.log(`Quiz with ID ${quizzId} has been updated with new questions.`);
   }
 }
